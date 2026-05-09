@@ -4,6 +4,7 @@ import '../data/mock_data.dart';
 import '../providers/app_provider.dart';
 import 'Ride_screen.dart';
 import 'app_colors.dart';
+import 'safety_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String from = '6 October';
   String to = 'Maadi';
-  String transport = 'all';
+  String transport = 'ride_share';
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 18),
           children: [
-            Row(children: [const Icon(Icons.menu, size: 34), const Spacer(), CircleAvatar(radius: 28, backgroundColor: AppColors.primary.withOpacity(.12), child: Text((user?.name ?? 'S')[0], style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)))]),
+            Row(children: [IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())), icon: const Icon(Icons.menu, size: 30)), const Spacer(), IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No new notifications'))), icon: const Icon(Icons.notifications_none_rounded)), CircleAvatar(radius: 22, backgroundColor: AppColors.primary.withOpacity(.12), child: Text((user?.name ?? 'S')[0], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)))]),
             const SizedBox(height: 34),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: RichText(text: TextSpan(style: const TextStyle(fontSize: 34, height: 1.25, color: Colors.black, fontWeight: FontWeight.w900), children: [const TextSpan(text: 'Welcome,\n'), TextSpan(text: '${user?.name ?? 'Sara'} ', style: const TextStyle(color: Color(0xFF241A9B))), const TextSpan(text: '👋')]))),
@@ -50,7 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 SizedBox(height: 128, child: ListView(scrollDirection: Axis.horizontal, children: [_transportCard('all', 'All', Icons.commute), _transportCard('microbus', 'Microbus', Icons.airport_shuttle), _transportCard('bus', 'Bus', Icons.directions_bus), _transportCard('ride_share', 'Ride Share', Icons.directions_car)])),
                 const SizedBox(height: 26),
-                SizedBox(width: double.infinity, height: 66, child: DecoratedBox(decoration: BoxDecoration(gradient: appGradient(), borderRadius: BorderRadius.circular(18)), child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, foregroundColor: Colors.white), icon: const Icon(Icons.search), label: const Text('Find Route', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), onPressed: () async { await context.read<AppProvider>().searchRoutes(from: from, to: to, transport: transport); if (context.mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const RidesScreen())); }))),
+                SizedBox(width: double.infinity, height: 66, child: DecoratedBox(decoration: BoxDecoration(gradient: appGradient(), borderRadius: BorderRadius.circular(18)), child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, foregroundColor: Colors.white), icon: const Icon(Icons.search), label: const Text('Find Route', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), onPressed: () async { final provider = context.read<AppProvider>(); await provider.searchRoutes(from: from, to: to, transport: transport); if (!mounted) return; Navigator.push(context, MaterialPageRoute(builder: (_) => const RidesScreen())); }))),
+                const SizedBox(height: 16),
+                Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFFEFFBF5), borderRadius: BorderRadius.circular(16)), child: Row(children: const [Icon(Icons.eco, color: Colors.green), SizedBox(width: 10), Expanded(child: Text('Save money, save the planet! Share rides and reduce traffic together.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700))), Icon(Icons.public, color: Colors.green)])),
               ]),
             ),
           ],

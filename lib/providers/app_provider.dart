@@ -19,9 +19,11 @@ class AppProvider extends ChangeNotifier {
   List<Booking> bookings = List.from(MockData.bookings);
   int walletBalance = 250;
 
-  String from = '6 October';
+  String from = 'October';
   String to = 'Maadi';
-  String selectedTransport = 'all';
+  String selectedTransport = 'ride_share';
+  bool femaleOnly = false;
+  double maxPrice = 100;
 
   void setIndex(int index) {
     currentIndex = index;
@@ -39,6 +41,12 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setRideFilters({bool? femaleOnly, double? maxPrice}) {
+    this.femaleOnly = femaleOnly ?? this.femaleOnly;
+    this.maxPrice = maxPrice ?? this.maxPrice;
+    notifyListeners();
+  }
+
   Future<void> searchRoutes({required String from, required String to, String? transport}) async {
     this.from = from;
     this.to = to;
@@ -47,13 +55,24 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
 
     if (useMockData) {
-      filteredRoutes = MockData.routes.where((route) {
-        final matchFrom = from.isEmpty || route.start.toLowerCase().contains(from.toLowerCase());
-        final matchTo = to.isEmpty || route.end.toLowerCase().contains(to.toLowerCase());
+      final fromQuery = _normalize(from);
+      final toQuery = _normalize(to);
+      final matches = MockData.routes.where((route) {
+        final matchFrom = from.isEmpty || _normalize(route.start).contains(fromQuery) || _nearScore(route.start, from) <= 1;
+        final matchTo = to.isEmpty || _normalize(route.end).contains(toQuery) || _nearScore(route.end, to) <= 1;
         final matchType = selectedTransport == 'all' || route.transport_type == selectedTransport;
-        return matchFrom && matchTo && matchType;
-      }).toList();
-      if (filteredRoutes.isEmpty) filteredRoutes = List.from(MockData.routes);
+        final matchFemale = !femaleOnly || route.female_only;
+        final matchPrice = route.cost <= maxPrice;
+        return matchFrom && matchTo && matchType && matchFemale && matchPrice;
+      }).toList()
+        ..sort((a, b) {
+          final scoreA = _nearScore(a.start, from) + _nearScore(a.end, to) + a.cost / 100;
+          final scoreB = _nearScore(b.start, from) + _nearScore(b.end, to) + b.cost / 100;
+          return scoreA.compareTo(scoreB);
+        });
+      filteredRoutes = matches.isEmpty
+          ? (List<app_route.Route>.from(MockData.routes)..sort((a, b) => (_nearScore(a.start, from) + _nearScore(a.end, to)).compareTo(_nearScore(b.start, from) + _nearScore(b.end, to))))
+          : matches;
     } else {
       filteredRoutes = await api.getRoutes(from: from, to: to);
     }
@@ -129,5 +148,23 @@ class AppProvider extends ChangeNotifier {
   void topUpWallet(int amount) {
     walletBalance += amount;
     notifyListeners();
+  }
+
+  String _normalize(String value) => value.toLowerCase().replaceAll('6 ', '').replaceAll('-', ' ').trim();
+
+  int _nearScore(String routeArea, String queryArea) {
+    final a = _normalize(routeArea);
+    final b = _normalize(queryArea);
+    if (a == b || a.contains(b) || b.contains(a)) return 0;
+    const groups = [
+      ['october', 'sheikh zayed', 'giza'],
+      ['maadi', 'helwan', 'downtown'],
+      ['nasr city', 'heliopolis', 'new cairo'],
+      ['dokki', 'mohandessin', 'zamalek'],
+    ];
+    for (final group in groups) {
+      if (group.contains(a) && group.contains(b)) return 1;
+    }
+    return 3;
   }
 }
